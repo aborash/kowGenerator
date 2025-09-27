@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte avec adresse de tournoi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+   <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        #map {
+            height: 80vh;
+            width: 80vw;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>Carte du tournoi</h1>
+    <div id="map"></div>
+ <script src="mockTournois.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialisation de la carte
+        const map = L.map('map').setView([46.603354, 1.888334], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Fonction pour ajouter une adresse sur la carte
+        function addAdresse(adresse) {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        L.marker([lat, lon]).addTo(map)
+                            .bindPopup(adresse)
+                    } else {
+                        console.error("Adresse non trouvée :", adresse);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur lors du géocodage :", error);
+                });
+        }
+
+        // Appel à ton API locale pour récupérer l'adresse
+		//
+		
+
+        // Liste des URLs de tournois
+        const urlsTournois = [
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37044",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37045",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36974",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36430",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37517",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36461",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36727",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36553",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37559",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37606",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=35708",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36672",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37878",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36645",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36483",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37264"
+        ];
+
+        // Import du mock depuis mockTournois.js
+        // On suppose que le fichier est accessible en tant que module global
+        // Ajoute cette ligne en haut du fichier mockTournois.js : window.mockTournois = tournois;
+        // Puis on inclut le script avant ce script dans le HTML :
+        
+
+        // Transforme le tableau en objet pour lookup rapide
+        const mockTournoisMap = {};
+        if (window.mockTournois) {
+            console.log("mockTournois chargé :", window.mockTournois);
+            window.mockTournois.forEach(t => {
+                mockTournoisMap[t.url] = t;
+            });
+        }else{
+            console.error("mockTournois non défini. Vérifiez l'inclusion de mockTournois.js");
+        }
+
+        // Ajoute un marker avec coordonnées et nom
+        function addMarker(lat, lon, nom, adresse) {
+            L.marker([lat, lon]).addTo(map)
+                .bindPopup(`<b>${nom || ''}</b><br>${adresse || ''}`);
+        }
+
+        // Pour chaque tournoi
+        urlsTournois.forEach(url => {
+            if (mockTournoisMap[url]) {
+                // Si coordonnées connues, ajoute directement
+                const t = mockTournoisMap[url];
+                addMarker(t.lat, t.lon, t.nom, url);
+            } else {
+                // Sinon, scrape l'adresse puis géocode
+                fetch(`/scrape?url=${encodeURIComponent(url)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.adresse) {
+                            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(data.adresse)}`)
+                                .then(response => response.json())
+                                .then(geo => {
+                                    if (geo.length > 0) {
+                                        const lat = parseFloat(geo[0].lat);
+                                        const lon = parseFloat(geo[0].lon);
+                                        addMarker(lat, lon, data.nom, data.adresse);
+                                    } else {
+                                        console.error("Adresse non trouvée :", data.adresse);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error("Erreur lors du géocodage :", error);
+                                });
+                        } else {
+                            console.error("Impossible de récupérer l'adresse pour", url);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Erreur lors de l'appel à l'API pour", url, error);
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
