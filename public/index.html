@@ -90,14 +90,21 @@
         // Pour chaque tournoi, collecte les infos
         async function getTournoi(url) {
             try {
+                // Le scraping des résultats est maintenant fait côté serveur
+
+                // Extraire le tid de l'URL
+                const tidMatch = url.match(/tid=(\d+)/);
+                const tid = tidMatch ? tidMatch[1] : null;
+
                 if (mockTournoisMap[url]) {
                     // Si dans le mock, utilise les coordonnées connues
                     const t = mockTournoisMap[url];
-                    return {
+                return {
                         url: t.url,
                         lat: t.lat,
                         lon: t.lon,
-                        nom: t.nom
+                        nom: t.nom,
+                        resultats: data.resultats || []
                     };
                 } else {
                     // Sinon, scrape et géocode
@@ -109,7 +116,8 @@
                                 url: url,
                                 lat: parseFloat(geo[0].lat),
                                 lon: parseFloat(geo[0].lon),
-                                nom: data.nom
+                                nom: data.nom,
+                                resultats: data.resultats || []
                             };
                         }
                     }
@@ -117,7 +125,8 @@
                         url: url,
                         lat: null,
                         lon: null,
-                        nom: data.nom || null
+                        nom: data.nom || null,
+                        resultats: data.resultats || []
                     };
                 }
             } catch (error) {
