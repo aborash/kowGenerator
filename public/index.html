@@ -99,7 +99,9 @@
                 if (mockTournoisMap[url]) {
                     // Si dans le mock, utilise les coordonnées connues
                     const t = mockTournoisMap[url];
-                return {
+                    // Récupérer les résultats même pour les tournois en mock
+                    const data = await fetch(`/scrape?url=${encodeURIComponent(url)}`).then(r => r.json());
+                    return {
                         url: t.url,
                         lat: t.lat,
                         lon: t.lon,
