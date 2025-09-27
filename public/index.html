@@ -3,38 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte avec adresse de tournoi</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-   <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
-        }
-        #map {
-            height: 80vh;
-            width: 80vw;
+    <title>Liste des tournois</title>
+    <style>
+        #result {
+            white-space: pre;
+            font-family: monospace;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f5f5f5;
             border: 1px solid #ccc;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
     </style>
 </head>
 <body>
-    <h1>Carte du tournoi</h1>
-    <div id="map"></div>
- <script src="mockTournois.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <h1>Liste des tournois</h1>
+    <div id="result"></div>
+    <script src="mockTournois.js"></script>
     <script>
-        // Initialisation de la carte
-        const map = L.map('map').setView([46.603354, 1.888334], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
 
         // Fonction pour ajouter une adresse sur la carte
         function addAdresse(adresse) {
@@ -102,41 +87,61 @@
                 .bindPopup(`<b>${nom || ''}</b><br>${adresse || ''}`);
         }
 
-        // Pour chaque tournoi
-        urlsTournois.forEach(url => {
-            if (mockTournoisMap[url]) {
-                // Si coordonnées connues, ajoute directement
-                const t = mockTournoisMap[url];
-                addMarker(t.lat, t.lon, t.nom, url);
-            } else {
-                // Sinon, scrape l'adresse puis géocode
-                fetch(`/scrape?url=${encodeURIComponent(url)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.adresse) {
-                            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(data.adresse)}`)
-                                .then(response => response.json())
-                                .then(geo => {
-                                    if (geo.length > 0) {
-                                        const lat = parseFloat(geo[0].lat);
-                                        const lon = parseFloat(geo[0].lon);
-                                        addMarker(lat, lon, data.nom, data.adresse);
-                                    } else {
-                                        console.error("Adresse non trouvée :", data.adresse);
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error("Erreur lors du géocodage :", error);
-                                });
-                        } else {
-                            console.error("Impossible de récupérer l'adresse pour", url);
+        // Pour chaque tournoi, collecte les infos
+        async function getTournoi(url) {
+            try {
+                if (mockTournoisMap[url]) {
+                    // Si dans le mock, utilise les coordonnées connues
+                    const t = mockTournoisMap[url];
+                    return {
+                        url: t.url,
+                        lat: t.lat,
+                        lon: t.lon,
+                        nom: t.nom
+                    };
+                } else {
+                    // Sinon, scrape et géocode
+                    const data = await fetch(`/scrape?url=${encodeURIComponent(url)}`).then(r => r.json());
+                    if (data.adresse) {
+                        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(data.adresse)}`).then(r => r.json());
+                        if (geo.length > 0) {
+                            return {
+                                url: url,
+                                lat: parseFloat(geo[0].lat),
+                                lon: parseFloat(geo[0].lon),
+                                nom: data.nom
+                            };
                         }
-                    })
-                    .catch(error => {
-                        console.error("Erreur lors de l'appel à l'API pour", url, error);
-                    });
+                    }
+                    return {
+                        url: url,
+                        lat: null,
+                        lon: null,
+                        nom: data.nom || null
+                    };
+                }
+            } catch (error) {
+                console.error("Erreur pour", url, error);
+                return {
+                    url: url,
+                    lat: null,
+                    lon: null,
+                    nom: null
+                };
             }
-        });
+        }
+
+        // Traite tous les tournois et affiche le résultat
+        async function main() {
+            const result = [];
+            for (const url of urlsTournois) {
+                const tournoi = await getTournoi(url);
+                result.push(tournoi);
+            }
+            document.getElementById('result').textContent = JSON.stringify(result, null, 4);
+        }
+
+        main().catch(console.error);
     </script>
 </body>
 </html>
