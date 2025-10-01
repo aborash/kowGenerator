@@ -1,11 +1,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-async function getAdresseFromUrl(url) {
+function getAdresse($) {
     try {
-        console.log("Scraping de l'URL :", url);
-        const response = await axios.get(url);
-        const $ = cheerio.load(response.data);
         const street = $('[itemprop="streetAddress"]').text().trim();
         const postalCode = $('[itemprop="postalCode"]').text().trim();
         const locality = $('[itemprop="addressLocality"]').text().trim();
@@ -14,6 +11,35 @@ async function getAdresseFromUrl(url) {
     } catch (error) {
         console.error("Erreur :", error.message);
         return null;
+    }
+}
+
+function getDeuxJours($) {
+    try {
+        console.log("Vérification si le tournoi est sur deux jours");
+        
+        // Récupérer les dates depuis les meta tags ou les abbr
+        let debut = $('[itemprop="startDate"]').attr('content') || $('abbr.datetimeFixed').first().attr('title');
+        let fin = $('[itemprop="endDate"]').attr('content') || $('abbr.datetimeFixed').last().attr('title');
+        
+        console.log("Dates trouvées brutes - Début:", debut, "Fin:", fin);
+        
+        if (!debut || !fin) return false;
+
+        // Convertir les dates en objets Date
+        const debutDate = new Date(debut);
+        const finDate = new Date(fin);
+
+        // Comparer les jours en utilisant toDateString() qui inclut seulement la date sans l'heure
+        const memeJour = debutDate.toDateString() === finDate.toDateString();
+        
+        console.log("Dates converties - Début:", debutDate.toISOString(), "Fin:", finDate.toISOString());
+        console.log("Même jour:", memeJour);
+        
+        return !memeJour;
+    } catch (error) {
+        console.error("Erreur lors de la vérification des jours:", error.message);
+        return false;
     }
 }
 
@@ -57,6 +83,7 @@ async function getResultats(tid) {
 }
 
 module.exports = {
-    getAdresseFromUrl,
-    getResultats
+    getAdresse,
+    getResultats,
+    getDeuxJours
 };

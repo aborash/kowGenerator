@@ -21,28 +21,23 @@
     <script src="mockTournois.js"></script>
     <script>
 
-        // Fonction pour ajouter une adresse sur la carte
-        function addAdresse(adresse) {
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        const lat = parseFloat(data[0].lat);
-                        const lon = parseFloat(data[0].lon);
-                        L.marker([lat, lon]).addTo(map)
-                            .bindPopup(adresse)
-                    } else {
-                        console.error("Adresse non trouvée :", adresse);
-                    }
-                })
-                .catch(error => {
-                    console.error("Erreur lors du géocodage :", error);
-                });
+        // Fonction pour géocoder une adresse
+        async function geocodeAdresse(adresse) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}`);
+                const data = await response.json();
+                if (data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lon: parseFloat(data[0].lon)
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error("Erreur lors du géocodage :", error);
+                return null;
+            }
         }
-
-        // Appel à ton API locale pour récupérer l'adresse
-		//
-		
 
         // Liste des URLs de tournois
         const urlsTournois = [
@@ -54,14 +49,15 @@
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36461",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36727",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36553",
-            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37559",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37606",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=35708",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36672",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37878",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36645",
             "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=36483",
-            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37264"
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37264",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37991",
+            "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37990"
         ];
 
         // Import du mock depuis mockTournois.js
@@ -90,45 +86,29 @@
         // Pour chaque tournoi, collecte les infos
         async function getTournoi(url) {
             try {
-                // Le scraping des résultats est maintenant fait côté serveur
-
-                // Extraire le tid de l'URL
-                const tidMatch = url.match(/tid=(\d+)/);
-                const tid = tidMatch ? tidMatch[1] : null;
-
                 if (mockTournoisMap[url]) {
-                    // Si dans le mock, utilise les coordonnées connues
+                    // Si dans le mock, utilise directement toutes les données
                     const t = mockTournoisMap[url];
-                    // Récupérer les résultats même pour les tournois en mock
-                    const data = await fetch(`/scrape?url=${encodeURIComponent(url)}`).then(r => r.json());
                     return {
                         url: t.url,
                         lat: t.lat,
                         lon: t.lon,
                         nom: t.nom,
-                        resultats: data.resultats || []
+                        resultats: t.resultats,
+                        deuxJours: t.deuxJours
                     };
                 } else {
-                    // Sinon, scrape et géocode
+                    // Sinon, récupère les données du serveur et géocode l'adresse
                     const data = await fetch(`/scrape?url=${encodeURIComponent(url)}`).then(r => r.json());
-                    if (data.adresse) {
-                        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(data.adresse)}`).then(r => r.json());
-                        if (geo.length > 0) {
-                            return {
-                                url: url,
-                                lat: parseFloat(geo[0].lat),
-                                lon: parseFloat(geo[0].lon),
-                                nom: data.nom,
-                                resultats: data.resultats || []
-                            };
-                        }
-                    }
+                    const geoData = await geocodeAdresse(data.adresse);
+                    console.log("deuxJours "+data.deuxJours);
                     return {
                         url: url,
-                        lat: null,
-                        lon: null,
-                        nom: data.nom || null,
-                        resultats: data.resultats || []
+                        lat: geoData ? geoData.lat : null,
+                        lon: geoData ? geoData.lon : null,
+                        nom: data.nom,
+                        resultats: data.resultats || [],
+                        deuxJours: data.deuxJours
                     };
                 }
             } catch (error) {
@@ -137,7 +117,9 @@
                     url: url,
                     lat: null,
                     lon: null,
-                    nom: null
+                    nom: null,
+                    resultats: [],
+                    deuxJours: false
                 };
             }
         }
@@ -149,7 +131,38 @@
                 const tournoi = await getTournoi(url);
                 result.push(tournoi);
             }
+            
+            // Afficher les résultats des tournois
             document.getElementById('result').textContent = JSON.stringify(result, null, 4);
+            
+            // Ajouter une ligne de séparation
+            document.getElementById('result').textContent += "\n-------------------\n\n";
+            
+            // Création de la liste des joueurs
+            const AllPlayer = new Map(); // Utilisation d'une Map pour faciliter la recherche
+            
+            // Parcourir tous les tournois
+            result.forEach(tournoi => {
+                if (tournoi.resultats && Array.isArray(tournoi.resultats)) {
+                    tournoi.resultats.forEach(resultat => {
+                        if (!AllPlayer.has(resultat.nom)) {
+                            AllPlayer.set(resultat.nom, {
+                                nom: resultat.nom,
+                                region: '', // À remplir plus tard
+                                classements: [], // Liste des classements
+                                pointTotal: 0 // À calculer plus tard
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Convertir la Map en array pour l'affichage
+            const playersList = Array.from(AllPlayer.values());
+            
+            // Ajouter la liste des joueurs au résultat
+            document.getElementById('result').textContent += "Liste des joueurs :\n" + 
+                JSON.stringify(playersList, null, 4);
         }
 
         main().catch(console.error);
