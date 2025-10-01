@@ -1103,6 +1103,47 @@ const tournois = [
         "deuxJours": false
     },
     {
+        "url": "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=38661",
+        "lat": 47.8049,
+        "lon": 3.53321,
+        "nom": "La Small Bourgogne Cup (1ère édition) - Tournoi Kings of War à Saint Georges Sur Baulche | T³",
+        "resultats": [
+            {
+                "nom": "Maxime aka \"Maximork\"",
+                "classement": 1
+            },
+            {
+                "nom": "Julien aka \"MyNicknameIsBetterThanYours\"",
+                "classement": 2
+            },
+            {
+                "nom": "Kevin aka \"firegantelet\"",
+                "classement": 3
+            },
+            {
+                "nom": "Kenny aka \"Kintz\"",
+                "classement": 4
+            },
+            {
+                "nom": "Joris aka \"Jawjaw\"",
+                "classement": 5
+            },
+            {
+                "nom": "Rodolphe aka \"LuciusForge\"",
+                "classement": 6
+            },
+            {
+                "nom": "Morgan aka \"Balthus\"",
+                "classement": 7
+            },
+            {
+                "nom": "James aka \"Sousou\"",
+                "classement": 8
+            }
+        ],
+        "deuxJours": false
+    },
+    {
         "url": "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37264",
         "lat": 43.35,
         "lon": -0.25,
