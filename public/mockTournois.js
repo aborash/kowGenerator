@@ -1078,6 +1078,31 @@ const tournois = [
         "deuxJours": false
     },
     {
+        "url": "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=38781",
+     "lat": 50.643,
+        "lon": 3.099,
+        "nom": "La Marche Barbare 5 – La dernière Marche. - Tournoi Kings of War à Mons-En-Baroeul | T³",
+        "resultats": [
+            {
+                "nom": "Eric aka \"Crom-_-\"",
+                "classement": 1
+            },
+            {
+                "nom": "Alexandre aka \"Alex_59\"",
+                "classement": 2
+            },
+            {
+                "nom": "Antoine aka \"Kheps\"",
+                "classement": 3
+            },
+            {
+                "nom": "Alex aka \"Alexlesec\"",
+                "classement": 4
+            }
+        ],
+        "deuxJours": false
+    },
+    {
         "url": "https://www.tabletoptournaments.net/fr/t3_tournament.php?tid=37264",
         "lat": 43.35,
         "lon": -0.25,
